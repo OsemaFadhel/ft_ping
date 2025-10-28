@@ -1,5 +1,5 @@
-#include "ping.h"
-
+#include "../includes/ping.h"
+/*
 void send_ping(int sockfd, struct sockaddr_in *addr_con, char *reverse_hostname, char *ip_addr, char *hostname)
 {
 	int pingloop = 1;
@@ -23,4 +23,4 @@ void send_ping(int sockfd, struct sockaddr_in *addr_con, char *reverse_hostname,
 			pingloop = 0;
 		}
 	}
-}
+}*/

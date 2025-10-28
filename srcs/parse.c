@@ -17,85 +17,103 @@ t_flags defaults = {
 	.pattern = NULL
 };
 
-void get_flags(char *arg, t_flags *flags)
+void get_flags(int ac, char **av, t_flags *flags)
 {
-
+	int opt;
+	
+	// Reset getopt
+	optind = 1;
+	
+	while ((opt = getopt(ac, av, "v?")) != -1)
+	{
+		switch (opt)
+		{
+			case 'v':
+				flags->flag_v = true;
+				break;
+			case '?':
+				flags->flag_help = true;
+				print_usage();
+				exit(0);
+				break;
+			default:
+				fprintf(stderr, "ft_ping: invalid option -- '%c'\n", opt);
+				exit(1);
+		}
+	}
 }
 
 void parse_args(int ac, char **av, t_pars *p)
 {
-	//TODO: GET TARGET
-
-	//TODO: GET FLAGS
-
-	/*
-	int c;
-	int digit_optind = 0;
+	// Initialize
 	p->flags = defaults;
 	p->target = NULL;
 
+	// Parse flags (handles -v and -?)
+	get_flags(ac, av, &p->flags);
 
-	while (1) {
-		int this_option_optind = optind ? optind : 1;
-		int option_index = 0;
-		static struct option long_options[] = {
-			{"ttl",     required_argument, 0,  0 },
-			{"ip-timestamp",     required_argument, 0,  0 },
-			{"echo",     required_argument, 0,  0 },
-			{"usage",     required_argument, 0,  0 },
-			{0,         0,                 0,  0 }
-		};
-
-		c = getopt_long(argc, argv, "fnrv?l:T:w:W:s:p:",
-						long_options, &option_index);
-		if (c == -1)
-			break;
-
-		switch (c) {
-			case 0:
-				printf("option %s", long_options[option_index].name);
-				if (optarg)
-					printf(" with arg %s", optarg);
-				printf("\n");
-				break;
-
-			case 'f':
-				break;
-			case 'n':
-				break;
-			case 'r':
-				break;
-			case 'v':
-				printf("option a\n");
-				break;
-
-			case '?':
-				printf("option b\n");
-				break;
-
-			case 'l':
-				printf("option c with value '%s'\n", optarg);
-				break;
-
-			case 'T':
-				printf("option d with value '%s'\n", optarg);
-				break;
-
-			case 'w':
-				break;
-			
-			case 'W':
-				break;
-
-			case 's':
-				break;
-			
-			case 'p':
-				break;
-
-			default:
-				printf("?? getopt returned character code 0%o ??\n", c);
-		}
+	// Extract target (the remaining non-option argument)
+	if (optind < ac)
+	{
+		p->target = av[optind];
+		printf("Target set to: %s\n", p->target);
 	}
-	*/
+	else
+	{
+		fprintf(stderr, "ft_ping: missing host operand\n");
+		fprintf(stderr, "Try 'ft_ping -?' for more information.\n");
+		exit(1);
+	}
+
+	/*	
+	static struct option long_options[] = {
+	    {"ttl",          required_argument, 0, 0 },
+	    {"ip-timestamp", required_argument, 0, 0 },
+	    {0,              0,                 0, 0 }
+	};
+	
+	int c;
+	int option_index = 0;
+	
+	while ((c = getopt_long(ac, av, "fnrv?l:T:w:W:s:p:",
+	                        long_options, &option_index)) != -1)
+	{
+	    switch (c) {
+	        case 0:
+	            // Handle long options
+	            if (strcmp(long_options[option_index].name, "ttl") == 0)
+	                p->flags.ttl = atoi(optarg);
+	            else if (strcmp(long_options[option_index].name, "ip-timestamp") == 0)
+	                p->flags.ip_timestamp = atoi(optarg);
+	            break;
+	        case 'f':
+	            p->flags.flag_f = true;
+	            break;
+	        case 'n':
+	            p->flags.flag_n = true;
+	            break;
+	        case 'r':
+	            p->flags.flag_r = true;
+	            break;
+	        case 'T':
+	            p->flags.flag_T = true;
+	            break;
+	        case 'l':
+	            p->flags.preload = atoi(optarg);
+	            break;
+	        case 'w':
+	            p->flags.deadline = atoi(optarg);
+	            break;
+	        case 'W':
+	            p->flags.timeout = atoi(optarg);
+	            break;
+	        case 's':
+	            p->flags.size = atoi(optarg);
+	            break;
+	        case 'p':
+	            p->flags.pattern = optarg;
+	            break;
+	    }
+	}
+	 */
 }

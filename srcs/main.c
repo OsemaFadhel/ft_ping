@@ -1,10 +1,11 @@
 #include "../includes/ping.h"
 
+/*
 void intHandler(int sig)
 {
 	(void)sig;
 	ping_loop = 0;
-}
+}*/
 
 int	main(int ac, char **av)
 {
@@ -15,14 +16,14 @@ int	main(int ac, char **av)
 
 	if (ac < 2)
 	{
-		write(2, "Error\n", 6);
+		fprintf(stderr, "ft_ping: usage error: Destination address required\n");
 		return (1);
 	}
 
 	
 	parse_args(ac--, av++, &parsed);
 
-	addr_con.sin_addr.s_addr = get_ip(parsed.target);
+	//addr_con.sin_addr.s_addr = get_ip(parsed.target);
 
 	(void)addr_con;
 

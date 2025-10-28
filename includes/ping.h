@@ -13,13 +13,13 @@
 #include <signal.h>
 #include <stdbool.h>
 
-
+/*
 int ping_loop = 1;
 int g_ping_count = 0;
 int g_ping_interval = 1;
 int g_ping_timeout = 1;
 int g_ping_size = 64;
-int g_ping_ttl = 64;
+int g_ping_ttl = 64;*/
 
 typedef struct s_flags
 {
@@ -53,3 +53,8 @@ uint32_t get_ip(char *target);
 uint32_t dns_lookup(char *target);
 
 void send_ping(int sockfd, struct sockaddr_in *addrcon, char *reverse_hostname, char *ip_addr, char *hostname);
+
+
+//flags
+
+void print_usage();
