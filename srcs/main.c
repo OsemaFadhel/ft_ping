@@ -23,7 +23,7 @@ int	main(int ac, char **av)
 	
 	parse_args(ac--, av++, &parsed);
 
-	//addr_con.sin_addr.s_addr = get_ip(parsed.target);
+	addr_con.sin_addr.s_addr = get_ip(parsed.target);
 
 	(void)addr_con;
 

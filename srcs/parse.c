@@ -43,6 +43,17 @@ void get_flags(int ac, char **av, t_flags *flags)
 	}
 }
 
+/*
+ * parse_args: Parses command line arguments for ft_ping
+ * 
+ * NOTE: Real ping behavior with multiple hostnames:
+ *   - Real ping accepts multiple hostnames and pings the LAST one
+ *   - Example: `ping google.com yahoo.com` will ping yahoo.com but stays stuck in loop with packet loss
+ *
+ * Here:
+ *   - Only accept ONE hostname/IP address
+ *   - Multiple targets will result in an error
+ */
 void parse_args(int ac, char **av, t_pars *p)
 {
 	// Initialize
@@ -56,6 +67,15 @@ void parse_args(int ac, char **av, t_pars *p)
 	if (optind < ac)
 	{
 		p->target = av[optind];
+		
+		// Check for multiple hostnames (strict mode)
+		if (optind + 1 < ac)
+		{
+			fprintf(stderr, "ft_ping: too many arguments\n");
+			fprintf(stderr, "Try 'ft_ping -?' for more information.\n");
+			exit(1);
+		}
+		
 		printf("Target set to: %s\n", p->target);
 	}
 	else
