@@ -16,7 +16,7 @@
 *   3. Extracts IP address from the result
 *   4. Frees allocated memory
 */
-uint32_t dns_lookup(char *target)
+uint32_t dns_lookup(char *target, t_flags *flags)
 {
 	struct addrinfo hints, *result;
 	struct sockaddr_in *addr;
@@ -80,6 +80,11 @@ uint32_t dns_lookup(char *target)
 		return 0;
 	}
 
+	if (flags->flag_v) {
+	    printf("ai->ai_family: AF_INET, ai->ai_canonname: '%s'\n",
+	           result->ai_canonname ? result->ai_canonname : target);
+	}
+
 	/*
 	 * Extract IP address from result
 	 * 
@@ -116,7 +121,7 @@ uint32_t dns_lookup(char *target)
 	ip = addr->sin_addr.s_addr;
 
 	// Debug: Print resolved IP (raw format - not human readable)
-	printf("IP address resolved (raw): %s\n", inet_ntoa(addr->sin_addr));
+	//printf("IP address resolved (raw): %s\n", inet_ntoa(addr->sin_addr));
 	
 	/*
 	 * freeaddrinfo() - CRITICAL: Free memory allocated by getaddrinfo()
@@ -148,9 +153,9 @@ uint32_t dns_lookup(char *target)
  *   - Saves time: If user provides "8.8.8.8", no need for DNS query
  *   - Handles both cases: Works for both IPs and hostnames
  */
-uint32_t get_ip(char *target)
+uint32_t get_ip(char *target, t_flags *flags)
 {
-	struct in_addr ipv4;
+	//struct in_addr ipv4;
 
 	/*
 	 * inet_pton() - Convert IP address string to binary format
@@ -180,16 +185,16 @@ uint32_t get_ip(char *target)
 	 *   - inet_pton() supports both IPv4 and IPv6
 	 *   - inet_pton() has better error handling
 	 *   - inet_pton() is thread-safe
-	 */
+	 *
 	if (inet_pton(AF_INET, target, &ipv4) == 1)
 	{
 		// Target is a valid IP address string
 		// Return it directly (already in network byte order)
 		return ipv4.s_addr;
-	}
+	}*/
 
 	// Target is not a valid IP, assume it's a hostname
 	// Call dns_lookup() to resolve it via DNS
 	// Examples: "google.com", "localhost", "example.org"
-	return dns_lookup(target);
+	return dns_lookup(target, flags);
 }

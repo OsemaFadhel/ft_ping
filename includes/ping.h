@@ -49,8 +49,8 @@ typedef struct s_pars
 
 void parse_args(int ac, char **av, t_pars *p);
 
-uint32_t get_ip(char *target);
-uint32_t dns_lookup(char *target);
+uint32_t get_ip(char *target, t_flags *flags);
+uint32_t dns_lookup(char *target, t_flags *flags);
 
 void send_ping(int sockfd, struct sockaddr_in *addrcon, char *reverse_hostname, char *ip_addr, char *hostname);
 

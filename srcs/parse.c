@@ -76,7 +76,7 @@ void parse_args(int ac, char **av, t_pars *p)
 			exit(1);
 		}
 		
-		printf("Target set to: %s\n", p->target);
+		//printf("Target set to: %s\n", p->target);
 	}
 	else
 	{

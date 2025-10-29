@@ -9,7 +9,7 @@ void intHandler(int sig)
 
 int	main(int ac, char **av)
 {
-	//int sockfd;
+	int sockfd;
 	struct sockaddr_in addr_con;
 	t_pars parsed;
 	//int addrlen = sizeof(addr_con);
@@ -23,7 +23,18 @@ int	main(int ac, char **av)
 	
 	parse_args(ac--, av++, &parsed);
 
-	addr_con.sin_addr.s_addr = get_ip(parsed.target);
+	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	if (sockfd < 0)
+	{
+		perror("Socket creation failed");
+		return 1;
+	}
+
+	if (parsed.flags.flag_v) {
+	    printf("ft_ping: sock4.fd: %d (socktype: SOCK_RAW), hints.ai_family: AF_INET\n\n", sockfd);
+	}
+
+	addr_con.sin_addr.s_addr = get_ip(parsed.target, &parsed.flags);
 
 	(void)addr_con;
 
