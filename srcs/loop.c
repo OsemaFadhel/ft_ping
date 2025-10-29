@@ -1,26 +1,57 @@
 #include "../includes/ping.h"
-/*
-void send_ping(int sockfd, struct sockaddr_in *addr_con, char *reverse_hostname, char *ip_addr, char *hostname)
+
+void prepare_icmp_packet(t_icmp_packet *packet)
 {
-	int pingloop = 1;
-	int ping_count = 0;
-	int ping_interval = 1;
-	int ping_timeout = 1;
-	int ping_size = 64;
-	int ping_ttl = 64;
+	/* Zero the packet buffer to ensure no garbage bytes */
+	bzero(packet, sizeof(*packet));
 
-	char *ping_ip = ip_addr;
-	char *ping_hostname = hostname;
+	/* Fill ICMP header fields */
+	packet->hdr.type = ICMP_ECHO;
+	packet->hdr.un.echo.id = getpid();
 
-	while (pingloop) {
-		// Send ICMP echo request
-		// ...
-		// Handle response
-		// ...
-		sleep(ping_interval);
-		ping_count++;
-		if (ping_count >= g_ping_count) {
-			pingloop = 0;
-		}
+	/* sequence: use global counter (post-increment in original code)
+	   keep same behavior: assign then increment */
+	//packet->hdr.un.echo.sequence = g_ping_count++;
+
+	/* Compute checksum over the full packet */
+	packet->hdr.checksum = 0;
+}
+
+int recv_packet(int sockfd, struct sockaddr_in *addr_con)
+{
+	char buffer[1024];
+	socklen_t addr_len = sizeof(*addr_con);
+
+	int bytes_received = recvfrom(sockfd, buffer, sizeof(buffer), 0,
+	                              (struct sockaddr*)addr_con, &addr_len);
+	if (bytes_received > 0) {
+		printf("Packet Received from %s, size=%d bytes\n",
+		       inet_ntoa(addr_con->sin_addr), bytes_received);
 	}
-}*/
+	return bytes_received;
+}
+
+void send_packet(int sockfd, struct sockaddr_in *addr_con)
+{
+	t_icmp_packet packet;
+	int packet_size = sizeof(packet);
+
+	while (ping_loop) {
+		// Prepare ICMP packet (moved to helper for clarity)
+		prepare_icmp_packet(&packet);
+
+
+		if (sendto(sockfd, &packet, packet_size, 0, (struct sockaddr*)&addr_con, sizeof(addr_con)) <= 0) {
+			perror("Packet Sending Failed");
+		} else {
+			//g_ping_count++;
+			printf("Packet Sent to %s, size=%d bytes\n", inet_ntoa(addr_con->sin_addr), packet_size);
+		}
+
+		if (recv_packet(sockfd, addr_con) <= 0) {
+			printf("Packet receive failed\n");
+		}
+
+		sleep(g_ping_interval);
+	}
+}

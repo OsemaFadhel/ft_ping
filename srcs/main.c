@@ -1,11 +1,14 @@
 #include "../includes/ping.h"
 
-/*
+int ping_loop = 1;
+int g_ping_count = 0;
+int g_ping_interval = 1;
+
 void intHandler(int sig)
 {
 	(void)sig;
 	ping_loop = 0;
-}*/
+}
 
 int	main(int ac, char **av)
 {
@@ -36,21 +39,16 @@ int	main(int ac, char **av)
 
 	addr_con.sin_addr.s_addr = get_ip(parsed.target, &parsed.flags);
 
-	(void)addr_con;
-
-	/*if (ip_addr == NULL) {
-		write(2,"\nDNS lookup failed! Could not resolve hostname!\n", 48);
-		return 0;
-	}
-
+	/*
 	reverse_hostname = reverse_dns_lookup(ip_addr);
 	printf("\nTrying to connect to '%s' IP: %s\n", av[1], ip_addr);
 	printf("\nReverse Lookup domain: %s\n", reverse_hostname);
+	*/
+
 
 	signal(SIGINT, intHandler);
 
-	send_ping(sockfd, &addr_con, reverse_hostname, ip_addr, av[1]);
-	*/
-
+	send_packet(sockfd, &addr_con);
+	
 	return 0;
 }
