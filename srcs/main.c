@@ -2,6 +2,7 @@
 
 int ping_loop = 1;
 int g_ping_count = 0;
+int g_pckt_recvd = 0;
 int g_ping_interval = 1;
 
 void intHandler(int sig)
@@ -48,7 +49,7 @@ int	main(int ac, char **av)
 
 	signal(SIGINT, intHandler);
 
-	send_packet(sockfd, &addr_con);
+	start_loop(sockfd, &addr_con);
 	
 	return 0;
 }

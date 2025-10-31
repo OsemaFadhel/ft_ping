@@ -23,18 +23,16 @@ int recv_packet(int sockfd, struct sockaddr_in *addr_con)
 	socklen_t addr_len = sizeof(*addr_con);
 
 	int bytes_received = recvfrom(sockfd, buffer, sizeof(buffer), 0,
-	                              (struct sockaddr*)addr_con, &addr_len);
-	if (bytes_received > 0) {
-		printf("Packet Received from %s, size=%d bytes\n",
-		       inet_ntoa(addr_con->sin_addr), bytes_received);
-	}
+	    (struct sockaddr*)addr_con, &addr_len);
+
 	return bytes_received;
 }
 
-void send_packet(int sockfd, struct sockaddr_in *addr_con)
+void start_loop(int sockfd, struct sockaddr_in *addr_con)
 {
 	t_icmp_packet packet;
 	int packet_size = sizeof(packet);
+	int bytes_received;
 
 	while (ping_loop) {
 		// Prepare ICMP packet (moved to helper for clarity)
@@ -44,12 +42,18 @@ void send_packet(int sockfd, struct sockaddr_in *addr_con)
 		if (sendto(sockfd, &packet, packet_size, 0, (struct sockaddr*)&addr_con, sizeof(addr_con)) <= 0) {
 			perror("Packet Sending Failed");
 		} else {
-			//g_ping_count++;
+			g_ping_count++;
 			printf("Packet Sent to %s, size=%d bytes\n", inet_ntoa(addr_con->sin_addr), packet_size);
 		}
 
-		if (recv_packet(sockfd, addr_con) <= 0) {
+		bytes_received = recv_packet(sockfd, addr_con);
+		if (bytes_received <= 0)
 			printf("Packet receive failed\n");
+		else 
+		{
+			g_pckt_recvd++;
+			printf("Packet Received from %s, size=%d bytes\n",
+		       inet_ntoa(addr_con->sin_addr), bytes_received);
 		}
 
 		sleep(g_ping_interval);

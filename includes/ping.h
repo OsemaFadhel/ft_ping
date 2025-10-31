@@ -55,7 +55,7 @@ void parse_args(int ac, char **av, t_pars *p);
 uint32_t get_ip(char *target, t_flags *flags);
 uint32_t dns_lookup(char *target, t_flags *flags);
 
-void send_packet(int sockfd, struct sockaddr_in *addr_con);
+void start_loop(int sockfd, struct sockaddr_in *addr_con);
 
 
 //flags
