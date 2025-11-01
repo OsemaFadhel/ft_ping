@@ -1,18 +1,43 @@
 #include "../includes/ping.h"
 
+//standard icmp checksum algo
+u_int16_t checksum(void *b, int len)
+{
+	uint16_t *buf = b;
+	uint32_t sum = 0;
+	uint16_t result;
+
+	// Add all 16-bit words
+	for (sum = 0; len > 1; len -= 2)
+		sum += *buf++;
+
+	// Add left-over byte if odd length
+	if (len == 1)
+		sum += *(unsigned char *)buf;
+
+	// Fold 32-bit sum to 16 bits
+	sum = (sum >> 16) + (sum & 0xFFFF);
+	sum += (sum >> 16);
+
+	// Take one's complement
+	result = ~sum;
+
+	return result;
+}
+
 void prepare_icmp_packet(t_icmp_packet *packet)
 {
 	/* Zero the packet buffer to ensure no garbage bytes */
-	bzero(packet, sizeof(*packet));
+	memset(packet, 0, sizeof(*packet));
 
 	/* Fill ICMP header fields */
 	packet->hdr.type = ICMP_ECHO;
 	packet->hdr.code = 0;
 	packet->hdr.un.echo.id = htons(getpid() & 0xFFFF);
 	packet->hdr.un.echo.sequence = htons(g_ping_count++);
-
-	/* Compute checksum over the full packet */
-	packet->hdr.checksum = 0;
+	packet->hdr.checksum = 0; // 0 before calculating checksum
+	memset(packet->msg, 0x42, sizeof(packet->msg)); // Fill message
+	packet->hdr.checksum = checksum(packet, sizeof(*packet));
 }
 
 int recv_packet(int sockfd, struct sockaddr_in *addr_con)
@@ -21,8 +46,33 @@ int recv_packet(int sockfd, struct sockaddr_in *addr_con)
 	socklen_t addr_len = sizeof(*addr_con);
 
 	int bytes_received = recvfrom(sockfd, buffer, sizeof(buffer), 0,
-	    (struct sockaddr*)addr_con, &addr_len);
+		(struct sockaddr*)addr_con, &addr_len);
 
+	// validating recvd packet
+	if (bytes_received > 0) {
+		struct iphdr *ip_header = (struct iphdr *)buffer;
+		struct icmphdr *icmp_header = (struct icmphdr *)(buffer + (ip_header->ihl * 4));
+
+		// Check if it's an ICMP Echo Reply
+		if (icmp_header->type != ICMP_ECHOREPLY) {
+			printf("Received packet is not an ICMP Echo Reply\n");
+			return -1;
+		}
+
+		// matching ID
+		if (icmp_header->un.echo.id != htons(getpid() & 0xFFFF)) {
+			printf("Received packet ID does not match\n");
+			return -1;
+		}
+
+		// matching sequence number
+		if (icmp_header->un.echo.sequence != htons(g_ping_count - 1)) {
+			printf("Received packet sequence number does not match\n");
+			return -1;
+		}
+
+		//to extract ttl- TODO
+	}
 	return bytes_received;
 }
 
@@ -35,19 +85,22 @@ void start_loop(int sockfd, struct sockaddr_in *addr_con)
 	while (ping_loop) {
 		prepare_icmp_packet(&packet);
 
-		if (sendto(sockfd, &packet, packet_size, 0, (struct sockaddr*)addr_con, sizeof(*addr_con)) <= 0) 
+		if (sendto(sockfd, &packet, packet_size, 0, (struct sockaddr*)addr_con, sizeof(*addr_con)) <= 0)
+		{
 			perror("Packet Sending Failed");
-		else 
+			return;
+		}
+		else
 			printf("Packet Sent to %s, size=%d bytes\n", inet_ntoa(addr_con->sin_addr), packet_size);
-					
+
 		bytes_received = recv_packet(sockfd, addr_con);
 		if (bytes_received <= 0)
 			printf("Packet receive failed\n");
-		else 
+		else
 		{
 			g_pckt_recvd++;
 			printf("Packet Received from %s, size=%d bytes\n",
-		       inet_ntoa(addr_con->sin_addr), bytes_received);
+				inet_ntoa(addr_con->sin_addr), bytes_received);
 		}
 
 		sleep(g_ping_interval);

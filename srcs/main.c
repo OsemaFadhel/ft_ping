@@ -24,7 +24,7 @@ int	main(int ac, char **av)
 		return (1);
 	}
 
-	
+
 	parse_args(ac--, av++, &parsed);
 
 	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
@@ -35,18 +35,18 @@ int	main(int ac, char **av)
 	}
 
 	if (parsed.flags.flag_v) {
-	    printf("ft_ping: sock4.fd: %d (socktype: SOCK_RAW), hints.ai_family: AF_INET\n\n", sockfd);
+		printf("ft_ping: sock4.fd: %d (socktype: SOCK_RAW), hints.ai_family: AF_INET\n\n", sockfd);
 	}
 
 	memset(&addr_con, 0, sizeof(addr_con));
 	addr_con.sin_family = AF_INET;
 	addr_con.sin_addr.s_addr = get_ip(parsed.target, &parsed.flags);
-	if (addr_con.sin_addr.s_addr == 0) 
-	    return 1;
-	
+	if (addr_con.sin_addr.s_addr == 0)
+		return 1;
+
 	signal(SIGINT, intHandler);
 
 	start_loop(sockfd, &addr_con);
-	
+
 	return 0;
 }

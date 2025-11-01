@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <sys/time.h>
 
 
 extern int ping_loop;
@@ -27,13 +28,13 @@ typedef struct s_icmp_packet
 
 typedef struct s_flags
 {
-	bool flag_f;
+	/*bool flag_f;
 	bool flag_n;
 	bool flag_r;
-	bool flag_T;
+	bool flag_T;*/
 	bool flag_v;
-	bool flag_help;
 
+	/*
 	// flags with arguments
 	int  preload;       // -l
 	int  deadline;      // -w
@@ -41,7 +42,7 @@ typedef struct s_flags
 	int  size;          // -s
 	int  ttl;           // --ttl
 	int  ip_timestamp;  // --ip-timestamp
-	char *pattern;      // -p
+	char *pattern;      // -p*/
 }   t_flags;
 
 typedef struct s_pars
