@@ -17,6 +17,7 @@
 extern int ping_loop;
 extern int g_ping_count;
 extern int g_ping_interval;
+extern int g_pckt_recvd;
 
 typedef struct s_icmp_packet
 {

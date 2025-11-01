@@ -30,7 +30,7 @@ int	main(int ac, char **av)
 	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (sockfd < 0)
 	{
-		perror("Socket creation failed");
+		perror("Need to run as root user, because it uses raw sockets");
 		return 1;
 	}
 
@@ -38,15 +38,12 @@ int	main(int ac, char **av)
 	    printf("ft_ping: sock4.fd: %d (socktype: SOCK_RAW), hints.ai_family: AF_INET\n\n", sockfd);
 	}
 
+	memset(&addr_con, 0, sizeof(addr_con));
+	addr_con.sin_family = AF_INET;
 	addr_con.sin_addr.s_addr = get_ip(parsed.target, &parsed.flags);
-
-	/*
-	reverse_hostname = reverse_dns_lookup(ip_addr);
-	printf("\nTrying to connect to '%s' IP: %s\n", av[1], ip_addr);
-	printf("\nReverse Lookup domain: %s\n", reverse_hostname);
-	*/
-
-
+	if (addr_con.sin_addr.s_addr == 0) 
+	    return 1;
+	
 	signal(SIGINT, intHandler);
 
 	start_loop(sockfd, &addr_con);
