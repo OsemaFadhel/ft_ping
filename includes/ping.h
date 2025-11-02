@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -56,6 +57,7 @@ void parse_args(int ac, char **av, t_pars *p);
 
 uint32_t get_ip(char *target, t_flags *flags);
 uint32_t dns_lookup(char *target, t_flags *flags);
+char *reverse_dns_lookup(uint32_t ip_addr);
 
 void start_loop(int sockfd, struct sockaddr_in *addr_con);
 

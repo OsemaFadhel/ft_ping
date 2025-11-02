@@ -44,6 +44,12 @@ int	main(int ac, char **av)
 	if (addr_con.sin_addr.s_addr == 0)
 		return 1;
 
+	printf("FT_PING %s (%s) %d(%d) bytes of data.\n",
+	       parsed.target,
+	       inet_ntoa(addr_con.sin_addr),
+	       56,  // payload size: sizeof(packet.msg)
+	       84); // total: 20 (IP) + 8 (ICMP) + 56 (data)
+
 	signal(SIGINT, intHandler);
 
 	start_loop(sockfd, &addr_con);

@@ -40,13 +40,19 @@ void prepare_icmp_packet(t_icmp_packet *packet)
 	packet->hdr.checksum = checksum(packet, sizeof(*packet));
 }
 
-int recv_packet(int sockfd, struct sockaddr_in *addr_con)
+int recv_packet(int sockfd, struct sockaddr_in *addr_con, struct timeval *send_time)
 {
 	char buffer[1024];
 	socklen_t addr_len = sizeof(*addr_con);
+	struct timeval recv_time;
 
 	int bytes_received = recvfrom(sockfd, buffer, sizeof(buffer), 0,
 		(struct sockaddr*)addr_con, &addr_len);
+
+	gettimeofday(&recv_time, NULL);  // Set recv_time RIGHT AFTER receiving
+
+	double time_ms = (recv_time.tv_sec - send_time->tv_sec) * 1000.0 +
+		(recv_time.tv_usec - send_time->tv_usec) / 1000.0;
 
 	// validating recvd packet
 	if (bytes_received > 0) {
@@ -55,23 +61,32 @@ int recv_packet(int sockfd, struct sockaddr_in *addr_con)
 
 		// Check if it's an ICMP Echo Reply
 		if (icmp_header->type != ICMP_ECHOREPLY) {
-			printf("Received packet is not an ICMP Echo Reply\n");
+			//printf("Received packet is not an ICMP Echo Reply\n");
 			return -1;
 		}
 
 		// matching ID
 		if (icmp_header->un.echo.id != htons(getpid() & 0xFFFF)) {
-			printf("Received packet ID does not match\n");
+			//printf("Received packet ID does not match\n");
 			return -1;
 		}
 
 		// matching sequence number
 		if (icmp_header->un.echo.sequence != htons(g_ping_count - 1)) {
-			printf("Received packet sequence number does not match\n");
+			//printf("Received packet sequence number does not match\n");
 			return -1;
 		}
 
-		//to extract ttl- TODO
+		g_pckt_recvd++;
+		printf(
+			"%d bytes from %s (%s): icmp_seq=%d ttl=%d time=%.1f ms\n",
+			bytes_received,
+			reverse_dns_lookup(addr_con->sin_addr.s_addr),
+			inet_ntoa(addr_con->sin_addr),
+			ntohs(icmp_header->un.echo.sequence),
+			ip_header->ttl,
+			time_ms
+		);
 	}
 	return bytes_received;
 }
@@ -81,27 +96,22 @@ void start_loop(int sockfd, struct sockaddr_in *addr_con)
 	t_icmp_packet packet;
 	int packet_size = sizeof(packet);
 	int bytes_received;
+	struct timeval send_time;
 
 	while (ping_loop) {
 		prepare_icmp_packet(&packet);
 
+		gettimeofday(&send_time, NULL);
 		if (sendto(sockfd, &packet, packet_size, 0, (struct sockaddr*)addr_con, sizeof(*addr_con)) <= 0)
 		{
-			perror("Packet Sending Failed");
+			//perror("Packet Sending Failed");
 			return;
 		}
-		else
-			printf("Packet Sent to %s, size=%d bytes\n", inet_ntoa(addr_con->sin_addr), packet_size);
 
-		bytes_received = recv_packet(sockfd, addr_con);
+		bytes_received = recv_packet(sockfd, addr_con, &send_time);
+
 		if (bytes_received <= 0)
-			printf("Packet receive failed\n");
-		else
-		{
-			g_pckt_recvd++;
-			printf("Packet Received from %s, size=%d bytes\n",
-				inet_ntoa(addr_con->sin_addr), bytes_received);
-		}
+			printf("Request timeout\n");
 
 		sleep(g_ping_interval);
 	}
