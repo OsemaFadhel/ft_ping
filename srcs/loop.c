@@ -40,7 +40,7 @@ void prepare_icmp_packet(t_icmp_packet *packet)
 	packet->hdr.checksum = checksum(packet, sizeof(*packet));
 }
 
-int recv_packet(int sockfd, struct sockaddr_in *addr_con, struct timeval *send_time)
+int recv_packet(int sockfd, struct sockaddr_in *addr_con, struct timeval *send_time, t_flags *flags)
 {
 	char buffer[1024];
 	socklen_t addr_len = sizeof(*addr_con);
@@ -51,7 +51,7 @@ int recv_packet(int sockfd, struct sockaddr_in *addr_con, struct timeval *send_t
 
 	gettimeofday(&recv_time, NULL);  // Set recv_time RIGHT AFTER receiving
 
-	double time_ms = (recv_time.tv_sec - send_time->tv_sec) * 1000.0 +
+	double rtt = (recv_time.tv_sec - send_time->tv_sec) * 1000.0 +
 		(recv_time.tv_usec - send_time->tv_usec) / 1000.0;
 
 	// validating recvd packet
@@ -78,20 +78,77 @@ int recv_packet(int sockfd, struct sockaddr_in *addr_con, struct timeval *send_t
 		}
 
 		g_pckt_recvd++;
-		printf(
-			"%d bytes from %s (%s): icmp_seq=%d ttl=%d time=%.1f ms\n",
-			bytes_received,
-			reverse_dns_lookup(addr_con->sin_addr.s_addr),
-			inet_ntoa(addr_con->sin_addr),
-			ntohs(icmp_header->un.echo.sequence),
-			ip_header->ttl,
-			time_ms
-		);
+
+		if (rtt_count == 0 || rtt < rtt_min) {
+			rtt_min = rtt;
+		}
+		if (rtt_count == 0 || rtt > rtt_max) {
+			rtt_max = rtt;
+		}
+		rtt_sum += rtt;
+		rtt_sum_squares += (rtt * rtt);
+		rtt_count++;
+
+		if (flags->flag_v) {
+				printf(
+					"%d bytes from %s (%s): icmp_seq=%d ident=%d ttl=%d time=%.1f ms\n",
+					bytes_received - (ip_header->ihl * 4), // Actual ICMP payload size
+					reverse_dns_lookup(addr_con->sin_addr.s_addr),
+					inet_ntoa(addr_con->sin_addr),
+					g_ping_count,
+					icmp_header->un.echo.id,
+					ip_header->ttl,
+					rtt
+				);
+		}
+		else {
+			printf(
+				"%d bytes from %s (%s): icmp_seq=%d ttl=%d time=%.1f ms\n",
+				bytes_received - (ip_header->ihl * 4), // Actual ICMP payload size
+				reverse_dns_lookup(addr_con->sin_addr.s_addr),
+				inet_ntoa(addr_con->sin_addr),
+				g_ping_count,
+				ip_header->ttl,
+				rtt
+			);
+		}
 	}
 	return bytes_received;
 }
 
-void start_loop(int sockfd, struct sockaddr_in *addr_con)
+void print_stats(t_pars *parsed)
+{
+	struct timeval end_time;
+	gettimeofday(&end_time, NULL);
+
+	// Calculate total time in milliseconds
+	double total_time = (end_time.tv_sec - start_time.tv_sec) * 1000.0 +
+					(end_time.tv_usec - start_time.tv_usec) / 1000.0;
+
+	// Calculate packet loss percentage
+	double packet_loss = 0.0;
+	if (g_ping_count > 0) {
+		packet_loss = ((g_ping_count - g_pckt_recvd) / (double)g_ping_count) * 100.0;
+	}
+
+	printf("\n--- %s ft_ping statistics ---\n", parsed->target);
+	printf("%d packets transmitted, %d received, %.1f%% packet loss, time %.0fms\n",
+		g_ping_count, g_pckt_recvd, packet_loss, total_time);
+
+	// Only print RTT stats if we received packets
+	if (rtt_count > 0) {
+		double rtt_avg = rtt_sum / rtt_count;
+
+		// Calculate standard deviation (mdev)
+		double variance = (rtt_sum_squares / rtt_count) - (rtt_avg * rtt_avg);
+		double rtt_mdev = (variance > 0) ? sqrt(variance) : 0.0;
+
+		printf("rtt min/avg/max/mdev = %.3f/%.3f/%.3f/%.3f ms\n",
+			rtt_min, rtt_avg, rtt_max, rtt_mdev);
+	}
+}
+
+void start_loop(int sockfd, struct sockaddr_in *addr_con, t_flags *flags, t_pars *parsed)
 {
 	t_icmp_packet packet;
 	int packet_size = sizeof(packet);
@@ -108,11 +165,13 @@ void start_loop(int sockfd, struct sockaddr_in *addr_con)
 			return;
 		}
 
-		bytes_received = recv_packet(sockfd, addr_con, &send_time);
+		bytes_received = recv_packet(sockfd, addr_con, &send_time, flags);
 
 		if (bytes_received <= 0)
 			printf("Request timeout\n");
 
 		sleep(g_ping_interval);
 	}
+
+	print_stats(parsed);
 }

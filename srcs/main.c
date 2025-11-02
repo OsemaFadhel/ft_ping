@@ -4,6 +4,12 @@ int ping_loop = 1;
 int g_ping_count = 0;
 int g_pckt_recvd = 0;
 int g_ping_interval = 1;
+double rtt_min = 0.0;
+double rtt_max = 0.0;
+double rtt_sum = 0.0;
+double rtt_sum_squares = 0.0;
+int rtt_count = 0;
+struct timeval start_time;
 
 void intHandler(int sig)
 {
@@ -52,7 +58,9 @@ int	main(int ac, char **av)
 
 	signal(SIGINT, intHandler);
 
-	start_loop(sockfd, &addr_con);
+	gettimeofday(&start_time, NULL);
+
+	start_loop(sockfd, &addr_con, &parsed.flags, &parsed);
 
 	return 0;
 }

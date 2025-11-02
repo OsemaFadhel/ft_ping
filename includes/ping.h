@@ -14,12 +14,18 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <sys/time.h>
-
+#include <math.h>
 
 extern int ping_loop;
 extern int g_ping_count;
 extern int g_ping_interval;
 extern int g_pckt_recvd;
+extern double rtt_min;
+extern double rtt_max;
+extern double rtt_sum;
+extern double rtt_sum_squares;
+extern int rtt_count;
+extern struct timeval start_time;
 
 typedef struct s_icmp_packet
 {
@@ -59,7 +65,7 @@ uint32_t get_ip(char *target, t_flags *flags);
 uint32_t dns_lookup(char *target, t_flags *flags);
 char *reverse_dns_lookup(uint32_t ip_addr);
 
-void start_loop(int sockfd, struct sockaddr_in *addr_con);
+void start_loop(int sockfd, struct sockaddr_in *addr_con, t_flags *flags, t_pars *parsed);
 
 
 //flags

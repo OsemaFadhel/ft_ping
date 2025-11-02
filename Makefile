@@ -15,7 +15,7 @@ objs/%.o: %.c
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CC) $(FLAGS) $(OBJS) -o $(NAME)
+	$(CC) $(FLAGS) $(OBJS) -o $(NAME) -lm
 
 clean:
 	rm -rf  $(NAME) $(OBJS)
