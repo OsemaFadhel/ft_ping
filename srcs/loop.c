@@ -139,12 +139,18 @@ void print_stats(t_pars *parsed)
 	if (rtt_count > 0) {
 		double rtt_avg = rtt_sum / rtt_count;
 
-		// Calculate standard deviation (mdev)
-		double variance = (rtt_sum_squares / rtt_count) - (rtt_avg * rtt_avg);
-		double rtt_mdev = (variance > 0) ? sqrt(variance) : 0.0;
-
-		printf("rtt min/avg/max/mdev = %.3f/%.3f/%.3f/%.3f ms\n",
-			rtt_min, rtt_avg, rtt_max, rtt_mdev);
+		// Calculate standard deviation (mdev) - same as real ping
+		if (rtt_count > 1) {
+			double variance = (rtt_sum_squares - (rtt_sum * rtt_sum / rtt_count)) / (rtt_count - 1);
+			double rtt_mdev = (variance > 0) ? sqrt(variance) : 0.0;
+			
+			printf("rtt min/avg/max/mdev = %.3f/%.3f/%.3f/%.3f ms\n",
+				rtt_min, rtt_avg, rtt_max, rtt_mdev);
+		} else {
+			// Only one sample, no meaningful standard deviation
+			printf("rtt min/avg/max = %.3f/%.3f/%.3f ms\n",
+				rtt_min, rtt_avg, rtt_max);
+		}
 	}
 }
 

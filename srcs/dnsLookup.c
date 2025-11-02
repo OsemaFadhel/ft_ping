@@ -169,5 +169,47 @@ uint32_t dns_lookup(char *target, t_flags *flags)
 */
 uint32_t get_ip(char *target, t_flags *flags)
 {
+	struct in_addr ipv4;
+
+	/*
+	* inet_pton() - Convert IP address string to binary format
+	*
+	* PROTOTYPE:
+	*   int inet_pton(int af,           // Address family (AF_INET or AF_INET6)
+	*                 const char *src,  // String IP address (e.g., "8.8.8.8")
+	*                 void *dst);       // Output buffer (struct in_addr)
+	*
+	* RETURN VALUES:
+	*   1  = Success (valid IP address converted)
+	*   0  = Invalid IP format (not a valid IP string)
+	*   -1 = Error (af is not valid address family)
+	*
+	* EXAMPLES:
+	*   Input: "8.8.8.8"         → Returns 1, ipv4.s_addr = 0x08080808
+	*   Input: "192.168.1.1"     → Returns 1, ipv4.s_addr = 0xC0A80101
+	*   Input: "127.0.0.1"       → Returns 1, ipv4.s_addr = 0x7F000001
+	*   Input: "google.com"      → Returns 0 (not an IP address)
+	*   Input: "999.999.999.999" → Returns 0 (invalid IP)
+	*
+	* struct in_addr:
+	*   Contains a single field: s_addr (32-bit IPv4 address)
+	*   Stored in NETWORK BYTE ORDER (big-endian)
+	*
+	* WHY USE inet_pton() INSTEAD OF inet_addr()?
+	*   - inet_addr() is obsolete
+	*   - inet_pton() supports both IPv4 and IPv6
+	*   - inet_pton() has better error handling
+	*   - inet_pton() is thread-safe
+	*/
+	if (inet_pton(AF_INET, target, &ipv4) == 1)
+	{
+		// Target is a valid IP address string
+		// Return it directly (already in network byte order)
+		return ipv4.s_addr;
+	}
+
+	// Target is not a valid IP, assume it's a hostname
+	// Call dns_lookup() to resolve it via DNS
+	// Examples: "google.com", "localhost", "example.org"
 	return dns_lookup(target, flags);
 }
