@@ -34,86 +34,112 @@ void prepare_icmp_packet(t_icmp_packet *packet)
 	packet->hdr.type = ICMP_ECHO;
 	packet->hdr.code = 0;
 	packet->hdr.un.echo.id = htons(getpid() & 0xFFFF);
-	packet->hdr.un.echo.sequence = htons(g_ping_count++);
+	packet->hdr.un.echo.sequence = htons(g_ping_count);
 	packet->hdr.checksum = 0; // 0 before calculating checksum
 	memset(packet->msg, 0x42, sizeof(packet->msg)); // Fill message
 	packet->hdr.checksum = checksum(packet, sizeof(*packet));
+    g_ping_count++;
 }
 
-int recv_packet(int sockfd, struct sockaddr_in *addr_con, struct timeval *send_time, t_flags *flags)
+int recv_packet(int sockfd, struct sockaddr_in *addr_con, struct timeval *send_time, 
+                t_flags *flags)
 {
-	char buffer[1024];
-	socklen_t addr_len = sizeof(*addr_con);
-	struct timeval recv_time;
+    char buffer[1024];
+    socklen_t addr_len = sizeof(*addr_con);
+    struct timeval recv_time;
+    struct timeval timeout;
+    fd_set readfds;
+    int bytes_received;
 
-	int bytes_received = recvfrom(sockfd, buffer, sizeof(buffer), 0,
-		(struct sockaddr*)addr_con, &addr_len);
+    // Set timeout to 1 second (or your desired timeout)
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
 
-	gettimeofday(&recv_time, NULL);  // Set recv_time RIGHT AFTER receiving
+    // Loop until we get the right packet or timeout
+    while (1) {
+        FD_ZERO(&readfds);
+        FD_SET(sockfd, &readfds);
 
-	double rtt = (recv_time.tv_sec - send_time->tv_sec) * 1000.0 +
-		(recv_time.tv_usec - send_time->tv_usec) / 1000.0;
+        // Wait for data with timeout
+        int ready = select(sockfd + 1, &readfds, NULL, NULL, &timeout);
+        
+        if (ready <= 0) {
+            // Timeout or error
+            return -1;
+        }
 
-	// validating recvd packet
-	if (bytes_received > 0) {
-		struct iphdr *ip_header = (struct iphdr *)buffer;
-		struct icmphdr *icmp_header = (struct icmphdr *)(buffer + (ip_header->ihl * 4));
+        bytes_received = recvfrom(sockfd, buffer, sizeof(buffer), 0,
+            (struct sockaddr*)addr_con, &addr_len);
 
-		// Check if it's an ICMP Echo Reply
-		if (icmp_header->type != ICMP_ECHOREPLY) {
-			//printf("Received packet is not an ICMP Echo Reply\n");
-			return -1;
-		}
+        if (bytes_received <= 0) {
+            continue;  // Try again
+        }
 
-		// matching ID
-		if (icmp_header->un.echo.id != htons(getpid() & 0xFFFF)) {
-			//printf("Received packet ID does not match\n");
-			return -1;
-		}
+        gettimeofday(&recv_time, NULL);
 
-		// matching sequence number
-		if (icmp_header->un.echo.sequence != htons(g_ping_count - 1)) {
-			//printf("Received packet sequence number does not match\n");
-			return -1;
-		}
+        struct iphdr *ip_header = (struct iphdr *)buffer;
+        struct icmphdr *icmp_header = (struct icmphdr *)(buffer + (ip_header->ihl * 4));
 
-		g_pckt_recvd++;
+        // Check if it's an ICMP Echo Reply
+        if (icmp_header->type != ICMP_ECHOREPLY) {
+            continue;
+        }
 
-		if (rtt_count == 0 || rtt < rtt_min) {
-			rtt_min = rtt;
-		}
-		if (rtt_count == 0 || rtt > rtt_max) {
-			rtt_max = rtt;
-		}
-		rtt_sum += rtt;
-		rtt_sum_squares += (rtt * rtt);
-		rtt_count++;
+        // matching ID
+        if (icmp_header->un.echo.id != htons(getpid() & 0xFFFF)) {
+            // Not our packet, keep waiting
+            continue;
+        }
 
-		if (flags->flag_v) {
-				printf(
-					"%d bytes from %s (%s): icmp_seq=%d ident=%d ttl=%d time=%.1f ms\n",
-					bytes_received - (ip_header->ihl * 4), // Actual ICMP payload size
-					reverse_dns_lookup(addr_con->sin_addr.s_addr),
-					inet_ntoa(addr_con->sin_addr),
-					g_ping_count,
-					icmp_header->un.echo.id,
-					ip_header->ttl,
-					rtt
-				);
-		}
-		else {
-			printf(
-				"%d bytes from %s (%s): icmp_seq=%d ttl=%d time=%.1f ms\n",
-				bytes_received - (ip_header->ihl * 4), // Actual ICMP payload size
-				reverse_dns_lookup(addr_con->sin_addr.s_addr),
-				inet_ntoa(addr_con->sin_addr),
-				g_ping_count,
-				ip_header->ttl,
-				rtt
-			);
-		}
-	}
-	return bytes_received;
+        // matching sequence number
+        if (ntohs(icmp_header->un.echo.sequence) != g_ping_count - 1) {
+            // Wrong sequence (could be delayed reply from previous iteration)
+            // For strict behavior, you might want to ignore this
+            continue;
+        }
+
+        // Valid reply! Calculate RTT and print
+        double rtt = (recv_time.tv_sec - send_time->tv_sec) * 1000.0 +
+            (recv_time.tv_usec - send_time->tv_usec) / 1000.0;
+
+        g_pckt_recvd++;
+
+        if (rtt_count == 0 || rtt < rtt_min) {
+            rtt_min = rtt;
+        }
+        if (rtt_count == 0 || rtt > rtt_max) {
+            rtt_max = rtt;
+        }
+        rtt_sum += rtt;
+        rtt_sum_squares += (rtt * rtt);
+        rtt_count++;
+
+        if (flags->flag_v) {
+            printf(
+                "%d bytes from %s (%s): icmp_seq=%d ident=%d ttl=%d time=%.1f ms\n",
+                bytes_received - (ip_header->ihl * 4),
+                reverse_dns_lookup(addr_con->sin_addr.s_addr),
+                inet_ntoa(addr_con->sin_addr),
+                ntohs(icmp_header->un.echo.sequence),
+                ntohs(icmp_header->un.echo.id),
+                ip_header->ttl,
+                rtt
+            );
+        }
+        else {
+            printf(
+                "%d bytes from %s (%s): icmp_seq=%d ttl=%d time=%.1f ms\n",
+                bytes_received - (ip_header->ihl * 4),
+                reverse_dns_lookup(addr_con->sin_addr.s_addr),
+                inet_ntoa(addr_con->sin_addr),
+                ntohs(icmp_header->un.echo.sequence),  // ← FIX: use received seq
+                ip_header->ttl,
+                rtt
+            );
+        }
+
+        return bytes_received;
+    }
 }
 
 void print_stats(t_pars *parsed)
@@ -132,8 +158,8 @@ void print_stats(t_pars *parsed)
 	}
 
 	printf("\n--- %s ft_ping statistics ---\n", parsed->target);
-	printf("%d packets transmitted, %d received, %.1f%% packet loss, time %.0fms\n",
-		g_ping_count, g_pckt_recvd, packet_loss, total_time);
+	printf("%d packets transmitted, %d received, %d%% packet loss, time %.0fms\n",
+		g_ping_count, g_pckt_recvd, (int)packet_loss, total_time);
 
 	// Only print RTT stats if we received packets
 	if (rtt_count > 0) {
