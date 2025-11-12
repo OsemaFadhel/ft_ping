@@ -22,7 +22,6 @@ int	main(int ac, char **av)
 	int sockfd;
 	struct sockaddr_in addr_con;
 	t_pars parsed;
-	//int addrlen = sizeof(addr_con);
 
 	if (ac < 2)
 	{
