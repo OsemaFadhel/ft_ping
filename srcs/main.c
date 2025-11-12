@@ -1,15 +1,6 @@
 #include "../includes/ping.h"
 
 int ping_loop = 1;
-int g_ping_count = 0;
-int g_pckt_recvd = 0;
-int g_ping_interval = 1;
-double rtt_min = 0.0;
-double rtt_max = 0.0;
-double rtt_sum = 0.0;
-double rtt_sum_squares = 0.0;
-int rtt_count = 0;
-struct timeval start_time;
 
 void intHandler(int sig)
 {
@@ -17,10 +8,24 @@ void intHandler(int sig)
 	ping_loop = 0;
 }
 
+void init_globals(t_global_vars *globals)
+{
+	globals->g_ping_count = 0;
+	globals->g_ping_interval = 1;
+	globals->g_pckt_recvd = 0;
+	globals->rtt_min = 0.0;
+	globals->rtt_max = 0.0;
+	globals->rtt_sum = 0.0;
+	globals->rtt_sum_squares = 0.0;
+	globals->rtt_count = 0;
+	globals->error_count = 0;
+}
+
 int	main(int ac, char **av)
 {
 	int sockfd;
 	struct sockaddr_in addr_con;
+	t_global_vars globals;
 	t_pars parsed;
 
 	if (ac < 2)
@@ -29,7 +34,7 @@ int	main(int ac, char **av)
 		return (1);
 	}
 
-
+	init_globals(&globals);
 	parse_args(ac--, av++, &parsed);
 
 	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
@@ -41,6 +46,12 @@ int	main(int ac, char **av)
 
 	if (parsed.flags.flag_v) {
 		printf("ft_ping: sock4.fd: %d (socktype: SOCK_RAW), hints.ai_family: AF_INET\n\n", sockfd);
+	}
+
+	if (setsockopt(sockfd, IPPROTO_IP, IP_TTL, &parsed.flags.ttl, sizeof(parsed.flags.ttl)) != 0) {
+		perror("setsockopt IP_TTL failed");
+		close(sockfd);
+		exit(1);
 	}
 
 	memset(&addr_con, 0, sizeof(addr_con));
@@ -57,9 +68,9 @@ int	main(int ac, char **av)
 
 	signal(SIGINT, intHandler);
 
-	gettimeofday(&start_time, NULL);
+	gettimeofday(&globals.start_time, NULL);
 
-	start_loop(sockfd, &addr_con, &parsed.flags, &parsed);
+	start_loop(sockfd, &addr_con, &parsed.flags, &parsed, &globals);
 
 	return 0;
 }

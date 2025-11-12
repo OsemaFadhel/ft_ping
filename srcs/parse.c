@@ -3,6 +3,7 @@
 
 t_flags defaults = {
 	.flag_v = false,
+	.ttl = 1
 };
 
 void get_flags(int ac, char **av, t_flags *flags)
@@ -11,7 +12,7 @@ void get_flags(int ac, char **av, t_flags *flags)
 
 	optind = 1;
 
-	while ((opt = getopt(ac, av, "v?")) != -1)
+	while ((opt = getopt(ac, av, "vh?")) != -1)
 	{
 		switch (opt)
 		{
@@ -19,6 +20,10 @@ void get_flags(int ac, char **av, t_flags *flags)
 				flags->flag_v = true;
 				break;
 			case '?':
+				print_usage();
+				exit(0);
+				break;
+			case 'h':
 				print_usage();
 				exit(0);
 				break;

@@ -17,15 +17,21 @@
 #include <math.h>
 
 extern int ping_loop;
-extern int g_ping_count;
-extern int g_ping_interval;
-extern int g_pckt_recvd;
-extern double rtt_min;
-extern double rtt_max;
-extern double rtt_sum;
-extern double rtt_sum_squares;
-extern int rtt_count;
-extern struct timeval start_time;
+
+
+typedef struct s_global_vars
+{
+	int g_ping_count;
+	int g_ping_interval;
+	int g_pckt_recvd;
+	double rtt_min;
+	double rtt_max;
+	double rtt_sum;
+	double rtt_sum_squares;
+	int rtt_count;
+	int error_count;
+	struct timeval start_time;
+} t_global_vars;
 
 typedef struct s_icmp_packet
 {
@@ -35,21 +41,8 @@ typedef struct s_icmp_packet
 
 typedef struct s_flags
 {
-	/*bool flag_f;
-	bool flag_n;
-	bool flag_r;
-	bool flag_T;*/
 	bool flag_v;
-
-	/*
-	// flags with arguments
-	int  preload;       // -l
-	int  deadline;      // -w
-	int  timeout;       // -W
-	int  size;          // -s
-	int  ttl;           // --ttl
-	int  ip_timestamp;  // --ip-timestamp
-	char *pattern;      // -p*/
+	int ttl;
 }   t_flags;
 
 typedef struct s_pars
@@ -65,9 +58,6 @@ uint32_t get_ip(char *target, t_flags *flags);
 uint32_t dns_lookup(char *target, t_flags *flags);
 char *reverse_dns_lookup(uint32_t ip_addr);
 
-void start_loop(int sockfd, struct sockaddr_in *addr_con, t_flags *flags, t_pars *parsed);
-
-
-//flags
+void start_loop(int sockfd, struct sockaddr_in *addr_con, t_flags *flags, t_pars *parsed, t_global_vars *globals);
 
 void print_usage();
